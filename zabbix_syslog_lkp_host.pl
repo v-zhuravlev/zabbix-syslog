@@ -3,26 +3,23 @@
 use 5.010;
 use strict;
 use warnings;
-use JSON::RPC::Legacy::Client;
 use Data::Dumper;
 use Config::General;
 use CHI;
 use ZabbixApi;
 use List::MoreUtils qw (any);
 use English '-no_match_vars';
-use Readonly;
 use MIME::Base64 qw(encode_base64);
 use IO::Socket::INET;
 our $VERSION = 2.0;
 
-Readonly my $CACHE_TIMEOUT => 600;
-Readonly my $CACHE_DIR     => '/tmp/zabbix_syslog_cache';
+my $CACHE_TIMEOUT = 600;
+my $CACHE_DIR     = '/tmp/zabbix_syslog_cache';
 
 my $conf   = Config::General->new('/usr/local/etc/zabbix_syslog.cfg');
 my %Config = $conf->getall;
 
 #Authenticate yourself
-my $client = JSON::RPC::Legacy::Client->new();
 my $url = $Config{'url'} || die "URL is missing in zabbix_syslog.cfg\n";
 my $user = $Config{'user'} || die "API user is missing in zabbix_syslog.cfg\n";
 my $password = $Config{'password'} || die "API user password is missing in zabbix_syslog.cfg\n";
@@ -71,7 +68,6 @@ $zbx->login();
     foreach my $host ( hostinterface_get($ip)) {
 
         $hostid = $host->{'hostid'};
-        print $hostid;
         if ( any { /$hostid/msx } @hosts_found ) {
             next;
         }    #check if $hostid already is in array then skip(next)
@@ -118,6 +114,12 @@ sub hostinterface_get {
     
     my $result = $zbx->do('hostinterface.get',$params);
 
+    if ( $debug > 0 ) { print Dumper $result; }
+    # Check if response was successful (not empty array in result)
+    if ( !@{ $result } ) {
+        $zbx->logout();
+        die "hostinterface.get failed\n";
+    }
     return @{ $result };
 
 }
@@ -137,7 +139,12 @@ sub get_zbx_trapper_syslogid_by_hostid {
         };
     my $result = $zbx->do('item.get',$params);
 
-
+    if ( $debug > 0 ) { print Dumper $result; }
+    # Check if response was successful
+    if ( !@{ $result } ) {
+        $zbx->logout();
+        die "item.get failed\n";
+    }
     #return itemid of syslog key (trapper type)
     return ${ $result }[0]->{itemid};
 }
@@ -153,7 +160,14 @@ sub host_get {
 
     
     my $result = $zbx->do('host.get',$params);
+    
+    if ( $debug > 0 ) { print Dumper $result; }
 
+    # Check if response was successful
+    if ( !$result ) {
+        $zbx->logout();
+        die "host.get failed\n";
+    }
     return ${ $result }[0];    #return result
 }
 
@@ -162,8 +176,8 @@ sub zabbix_send {
     my $hostname     = shift;
     my $item         = shift;
     my $data         = shift;
-    Readonly my $SOCK_TIMEOUT     => 10;
-    Readonly my $SOCK_RECV_LENGTH => 1024;
+    my $SOCK_TIMEOUT     = 10;
+    my $SOCK_RECV_LENGTH = 1024;
 
     my $result;
 

@@ -1,8 +1,6 @@
 #Install reqs:  
 ```
-PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Readonly'
 PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'
-PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::RPC::Legacy::Client'
 PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'
 ```
 
