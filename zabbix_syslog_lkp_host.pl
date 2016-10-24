@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -Izabbixapi
 
 use 5.010;
 use strict;
@@ -7,6 +7,7 @@ use JSON::RPC::Legacy::Client;
 use Data::Dumper;
 use Config::General;
 use CHI;
+use ZabbixApi;
 use List::MoreUtils qw (any);
 use English '-no_match_vars';
 use Readonly;
@@ -26,7 +27,7 @@ my $url = $Config{'url'} || die "URL is missing in zabbix_syslog.cfg\n";
 my $user = $Config{'user'} || die "API user is missing in zabbix_syslog.cfg\n";
 my $password = $Config{'password'} || die "API user password is missing in zabbix_syslog.cfg\n";
 my $server = $Config{'server'} || die "server hostname is missing in zabbix_syslog.cfg\n";
-
+my $zbx;
 
 my $debug = $Config{'debug'};
 my ( $authID, $response, $json );
@@ -58,13 +59,19 @@ my $hostname = $cache->get($ip);
 
 if ( !defined $hostname ) {
 
-    $authID = login();
+my $result;
+
+$zbx = ZabbixAPI->new( { api_url => $url, username => $user, password => $password } );
+$zbx->login();
+
+
+#    $authID = login();
     my @hosts_found;
     my $hostid;
-    foreach my $host ( hostinterface_get() ) {
+    foreach my $host ( hostinterface_get($ip)) {
 
         $hostid = $host->{'hostid'};
-
+        print $hostid;
         if ( any { /$hostid/msx } @hosts_found ) {
             next;
         }    #check if $hostid already is in array then skip(next)
@@ -92,147 +99,62 @@ if ( !defined $hostname ) {
         }
 
     }
-    logout();
+    $zbx->logout();
     $cache->set( $ip, $hostname, $CACHE_TIMEOUT );
 }
 
 zabbix_send( $server, $hostname, 'syslog', $message );
 
 #______SUBS
-sub login {
-
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'user.login',
-        params  => {
-            user     => $user,
-            password => $password
-
-        },
-        id => $id++,
-    };
-
-    $response = $client->call( $url, $json );
-
-    # Check if response was successful
-    die "Authentication failed\n" unless $response->content->{'result'};
-
-    if ( $debug > 0 ) { print Dumper $response->content->{'result'}; }
-
-    return $response->content->{'result'};
-
-}
-
-sub logout {
-
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'user.logout',
-        params  => {},
-        id      => $id++,
-        auth    => $authID,
-    };
-
-    $response = $client->call( $url, $json );
-
-    # Check if response was successful
-    warn "Logout failed\n" unless $response->content->{'result'};
-
-    return;
-}
 
 sub hostinterface_get {
 
-    $json = {
-
-        jsonrpc => '2.0',
-        method  => 'hostinterface.get',
-        params  => {
+    my $ip = shift;
+    my $params = {
             output => [ 'ip', 'hostid' ],
             filter => { ip => $ip, },
-
             #    limit => 1,
-        },
-        id   => $id++,
-        auth => $authID,
     };
+    
+    my $result = $zbx->do('hostinterface.get',$params);
 
-    $response = $client->call( $url, $json );
-
-    if ( $debug > 0 ) { print Dumper $response; }
-
-    # Check if response was successful (not empty array in result)
-    if ( !@{ $response->content->{'result'} } ) {
-        logout();
-        die "hostinterface.get failed\n";
-    }
-
-    return @{ $response->content->{'result'} }
+    return @{ $result };
 
 }
 
 sub get_zbx_trapper_syslogid_by_hostid {
 
-    my $hostids = shift;
-
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'item.get',
-        params  => {
+    my $hostid = shift;
+    my $params = {
             output  => ['itemid'],
-            hostids => $hostids,
+            hostids => $hostid,
             search  => {
                 'key_' => 'syslog',
                 type   => 2,          #type => 2 is zabbix_trapper
                 status => 0,
-
             },
             limit => 1,
-        },
-        id   => $id++,
-        auth => $authID,
-    };
+        };
+    my $result = $zbx->do('item.get',$params);
 
-    $response = $client->call( $url, $json );
-    if ( $debug > 0 ) { print Dumper $response; }
-
-    # Check if response was successful
-    if ( !@{ $response->content->{'result'} } ) {
-        logout();
-        die "item.get failed\n";
-    }
 
     #return itemid of syslog key (trapper type)
-    return ${ $response->content->{'result'} }[0]->{itemid};
+    return ${ $result }[0]->{itemid};
 }
 
 sub host_get {
-    my $hostids = shift;
-
-    $json = {
-
-        jsonrpc => '2.0',
-        method  => 'host.get',
-        params  => {
-            hostids => [$hostids],
+    my $hostid = shift;
+    my $params = {
+            hostids => [$hostid],
             output  => [ 'host', 'proxy_hostid', 'status' ],
             filter => { status => 0, },    # only use hosts enabled
             limit  => 1,
-        },
-        id   => $id++,
-        auth => $authID,
-    };
+        };
 
-    $response = $client->call( $url, $json );
+    
+    my $result = $zbx->do('host.get',$params);
 
-    if ( $debug > 0 ) { print Dumper $response; }
-
-    # Check if response was successful
-    if ( !$response->content->{'result'} ) {
-        logout();
-        die "host.get failed\n";
-    }
-    return ${ $response->content->{'result'} }[0];    #return result
+    return ${ $result }[0];    #return result
 }
 
 sub zabbix_send {

@@ -1,0 +1,3 @@
+[submodule "zabbixapi"]
+	path = zabbixapi
+url=https://github.com/v-zhuravlev/ZabbixAPI
