@@ -3,7 +3,13 @@ Scripts to get Syslog (protocol) messages into Zabbix from network devices, serv
 
 
 ![new](https://cloud.githubusercontent.com/assets/14870891/19680057/da8dcf52-9aac-11e6-915a-cf136577dae3.png)  
+1. Configure network devices to route all Syslog messages to a your zabbix-server or zabbix-proxy host with rsyslog on board    
+2. with rsyslog configuration altered it would run script (3) and determines from what zabbix-host this message comes from(using Zabbix API)    
+4. zabbix-sender protocol is then used to put messages into zabbix  
 
+Features include:  
+- ip to host resolutions are cached to minimize the number of Zabbix API queries  
+- zabbix_sender here is in a form of a perl function, so no cli zabbix_sender tool is required      
 
 ##Map context menu  
 As a bonus, script `zabbix_syslog_create_urls.pl` can be used(and scheduled in cron for regular map link updates) to append a direct link into maps host menu for reading Syslog item values for each host that has syslog:  
