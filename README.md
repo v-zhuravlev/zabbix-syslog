@@ -1,3 +1,15 @@
+#About
+Scripts to get Syslog (protocol) messages into Zabbix from network devices, servers and others.  
+
+
+![new](https://cloud.githubusercontent.com/assets/14870891/19680057/da8dcf52-9aac-11e6-915a-cf136577dae3.png)  
+
+
+##Map context menu  
+As a bonus, script `zabbix_syslog_create_urls.pl` can be used(and scheduled in cron for regular map link updates) to append a direct link into maps host menu for reading Syslog item values for each host that has syslog:  
+![2013-12-30_152557](https://cloud.githubusercontent.com/assets/14870891/19680048/d248b76c-9aac-11e6-8a95-accd34794563.png)
+Script tries to be very cautious. So no rewriting of existing host links, only appending. Also link only added to hosts that has item with key 'syslog'  
+
 #Install reqs:  
 ```
 PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'
