@@ -4,15 +4,17 @@
 use 5.010;
 use strict;
 use warnings;
-use JSON::RPC::Legacy::Client;
+
+use FindBin qw($Bin);
+use lib "$Bin/lib";
 use Data::Dumper;
 use Config::General;
+use ZabbixAPI;
 our $VERSION = 1.1;
 my $conf   = Config::General->new('/usr/local/etc/zabbix_syslog.cfg');
 my %Config = $conf->getall;
 
 #Authenticate yourself
-my $client   = JSON::RPC::Legacy::Client->new();
 my $url      = $Config{'url'} || die "URL is missing in zabbix_syslog.cfg\n";
 my $user     = $Config{'user'} || die "API user is missing in zabbix_syslog.cfg\n";
 my $password = $Config{'password'}   || die "API user password is missing in zabbix_syslog.cfg\n";
@@ -20,11 +22,10 @@ my $server = $Config{'server'}   || die "server hostname is missing in zabbix_sy
 
 my $debug = $Config{'debug'};
 my ( $authID, $response, $json );
-my $id = 0;
 
 
-
-$authID = login();
+my $zbx = ZabbixAPI->new( { api_url => $url, username => $user, password => $password } );
+$zbx->login();
 
 my $syslog_url_base = 'history.php?action=showvalues';
 
@@ -97,160 +98,95 @@ my $syslog_url_base = 'history.php?action=showvalues';
 
 
 
-logout();
+$zbx->logout();
 
 #______SUBS
 sub get_syslogid_by_hostid {
-    my $hostids = shift;
+    
+    
+    my $hostid = shift;
 
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'item.get',
-        params  => {
+    my $params = {
             output  => ['itemid'],
-            hostids => $hostids,
+            hostids => $hostid,
             search  => { 'key_' => 'syslog' },
             limit   => 1,
-        },
-        id   => $id++,
-        auth => $authID,
-    };
+        };
+    my $result = $zbx->do('item.get',$params);
 
-    $response = $client->call( $url, $json );
 
     # Check if response was successful
-    if ( !$response->content->{'result'} ) {
-        logout();
+    if ( !$result ) {
+        $zbx->logout();
         die "item.get failed\n";
     }
 
     #return itemid of syslog key (trapper type)
-    return ${ $response->content->{'result'} }[0]->{itemid};
+    return ${ $result }[0]->{itemid};
 }
 
-sub login {
-
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'user.login',
-        params  => {
-            user     => $user,
-            password => $password
-
-        },
-        id => $id++,
-    };
-
-    $response = $client->call( $url, $json );
-
-    # Check if response was successful
-    die "Authentication failed\n" unless $response->content->{'result'};
-
-    if ( $debug > 0 ) { print Dumper $response->content->{'result'}; }
-
-    return $response->content->{'result'};
-
-}
 
 sub map_get {
 
     #retrieve all maps
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'map.get',
-        params  => {
+    my $params = {
             output => ['sysmapid']
-        },
-        id   => $id++,
-        auth => "$authID",
-    };
-
-    $response = $client->call( $url, $json );
+        };
+    my $result = $zbx->do('map.get',$params);
 
     # Check if response was successful
-    if ( !$response->content->{'result'} ) {
-        logout();
+    if ( !$result ) {
+        $zbx->logout();
         die "map.get failed\n";
     }
 
-    if ( $debug > 1 ) { print Dumper $response->content->{result}; }
-    return $response->content->{result};
+    if ( $debug > 1 ) { print Dumper $result; }
+    return $result;
 
 }
 
-sub logout {
-
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'user.logout',
-        params  => {},
-        id      => $id++,
-        auth    => $authID,
-    };
-
-    $response = $client->call( $url, $json );
-
-    # Check if response was successful
-    warn "Logout failed\n" unless $response->content->{'result'};
-
-    return;
-}
 
 sub map_get_extended {
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'map.get',
-        params  => {
+    my $params = {
             selectSelements => 'extend',
             #sysmapids       => $map,
-        },
-        id   => $id++,
-        auth => $authID,
     };
-
-    $response = $client->call( $url, $json );
+    
+    my $result = $zbx->do('map.get',$params);
 
     # Check if response was successful
-    if ( !$response->content->{'result'} ) {
-        logout();
+    if ( !$result ) {
+        $zbx->logout();
         die "map.get failed\n";
     }
     if ( $debug > 1 ) {
 
-        print Dumper $response->content->{'result'};
+        print Dumper $result;
     }
 
-    return $response->content->{'result'};
+    return $result;
 }
 
 sub map_update {
     my $mapid = shift;
     my $selements_ref = shift;
-    $json = {
-        jsonrpc => '2.0',
-        method  => 'map.update',
-        params  => {
+    my $params = {
             selements => [@{$selements_ref}],
             sysmapid  => $mapid,
-        },
-        id   => $id++,
-        auth => $authID,
-    };
-
+        };
+    my $result = $zbx->do('map.update',$params);
     if ( $debug > 0 ) {
         print "About to map.update this\n:";
-        print Dumper $json;
+        print Dumper $params;
     }
 
-    $response = $client->call( $url, $json );
-
     if ( $debug > 0 ) {
-        print Dumper $response;
+        print Dumper $result;
     }
 
     # Check if response was successful
-    if ( !$response->content->{'result'} ) {
-        logout();
+    if ( !$result ) {
+        $zbx->logout();
         die "map.update failed\n";
     }
     return;

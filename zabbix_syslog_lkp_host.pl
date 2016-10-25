@@ -1,12 +1,15 @@
-#!/usr/bin/perl -Izabbixapi
+#!/usr/bin/perl
 
 use 5.010;
 use strict;
 use warnings;
+
+use FindBin qw($Bin);
+use lib "$Bin/lib";
 use Data::Dumper;
 use Config::General;
 use CHI;
-use ZabbixApi;
+use ZabbixAPI;
 use List::MoreUtils qw (any);
 use English '-no_match_vars';
 use MIME::Base64 qw(encode_base64);
@@ -28,7 +31,6 @@ my $zbx;
 
 my $debug = $Config{'debug'};
 my ( $authID, $response, $json );
-my $id = 0;
 
 my $message = shift @ARGV   || die
   "Syslog message required as an argument\n";  #Grab syslog message from rsyslog
