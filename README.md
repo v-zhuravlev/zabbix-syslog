@@ -16,25 +16,40 @@ As a bonus, script `zabbix_syslog_create_urls.pl` can be used(and scheduled in c
 ![2013-12-30_152557](https://cloud.githubusercontent.com/assets/14870891/19680048/d248b76c-9aac-11e6-8a95-accd34794563.png)  
 Script will do no rewriting of existing host links, only appending to a list. Also link only added to hosts that has item with key 'syslog'.  
 
-#Install reqs:  
-```
-PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'
-PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'
-```
+#Setup  
+##Dependencies  
 
+The script is written in Perl and you will need common modules in order to run it:  
 ```
-/usr/local/bin/zabbix_syslog_create_urls.pl
+LWP
+JSON::XS
+CHI
+Config::General
+```
+There are numerous ways to install them:  
+
+| in Debian  | In Centos* | using CPAN | using cpanm|  
+|------------|-----------|------------|------------|  
+|  `apt-get install libwww-perl libjson-xs-perl libchi-perl libconfig-general-perl` | `yum install perl-JSON-XS perl-libwww-perl perl-LWP-Protocol-https perl-Config-General` | `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Bundle::LWP'` and  `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::XS` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'` | `cpanm install LWP` and `cpanm install JSON::XS` and `cpanm install CHI` and `cpanm install Config::General`|  
+* No package for CHI in Centos 7. Use cpanm.  
+
+##Copy scripts  
+```
+cp zabbix_syslog_create_urls.pl /usr/local/bin/zabbix_syslog_create_urls.pl
 chmod +x /usr/local/bin/zabbix_syslog_create_urls.pl
 
 
-/usr/local/bin/zabbix_syslog_lkp_host.pl
+cp zabbix_syslog_lkp_host.pl /usr/local/bin/zabbix_syslog_lkp_host.pl
 chmod +x /usr/local/bin/zabbix_syslog_lkp_host.pl
 
-/usr/local/etc/zabbix_syslog.cfg
+cp zabbix_syslog.cfg /usr/local/etc/zabbix_syslog.cfg
 sudo chown zabbix:zabbix /usr/local/etc/zabbix_syslog.cfg
 sudo chmod 700 /usr/local/etc/zabbix_syslog.cfg
 ```
-in /etc/rsyslog.d/zabbix_rsyslog.conf:  
+edit `/usr/local/etc/zabbix_syslog.cfg`  
+
+##rsyslog
+add file /etc/rsyslog.d/zabbix_rsyslog.conf with contents:  
 ```
 $template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
 $template network-fmt,"%TIMESTAMP:::date-rfc3339% [%fromhost-ip%] %pri-text% %syslogtag%%msg%\n"
@@ -50,7 +65,10 @@ if $fromhost-ip != '127.0.0.1' then ^/usr/local/bin/zabbix_syslog_lkp_host.pl;ne
 if $fromhost-ip != '127.0.0.1' then /var/log/network.log;network-fmt
 & ~
 ```
+and restart rsyslog  
 
+##Import template
+Import syslog template and attach it to hosts from which you expect syslog messages to come  
 
 #More info:  
 https://habrahabr.ru/company/zabbix/blog/252915/  
