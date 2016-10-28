@@ -10,8 +10,14 @@ use lib "$Bin/lib";
 use Data::Dumper;
 use Config::General;
 use ZabbixAPI;
-our $VERSION = 1.1;
-my $conf   = Config::General->new('/usr/local/etc/zabbix_syslog.cfg');
+our $VERSION = 2.0;
+my $conf;
+$conf  = eval {Config::General->new('/usr/local/etc/zabbix_syslog.cfg')};
+if ($@) {
+        eval {$conf  = Config::General->new('/etc/zabbix/zabbix_syslog.cfg')};
+        if ($@) {die "Please check that config file is available as /usr/local/etc/zabbix_syslog.cfg or /etc/zabbix/zabbix_syslog.cfg\n";}
+}
+
 my %Config = $conf->getall;
 
 #Authenticate yourself
@@ -37,6 +43,7 @@ my $syslog_url_base = 'history.php?action=showvalues';
        #put all mapelements into array @selements (so you can update map later!)
         @selements = @{ $map->{selements} };
 
+	print "INFO: Checking map with mapid $map->{sysmapid}\n";
         foreach my $selement (@selements) {
             my $syslog_button_exists = 0;
 
@@ -109,7 +116,7 @@ sub get_syslogid_by_hostid {
     my $params = {
             output  => ['itemid'],
             hostids => $hostid,
-            search  => { 'key_' => 'syslog' },
+            filter => {'key_' => 'syslog' },
             limit   => 1,
         };
     my $result = $zbx->do('item.get',$params);

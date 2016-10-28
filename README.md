@@ -35,18 +35,27 @@ There are numerous ways to install them:
 
 ##Copy scripts  
 ```
-cp zabbix_syslog_create_urls.pl /usr/local/bin/zabbix_syslog_create_urls.pl
-chmod +x /usr/local/bin/zabbix_syslog_create_urls.pl
+cp zabbix_syslog_create_urls.pl /etc/zabbix/scripts/zabbix_syslog_create_urls.pl
+chmod +x /etc/zabbix/scripts/zabbix_syslog_create_urls.pl
+
+cp zabbix_syslog_lkp_host.pl /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl
+chmod +x /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl
+
+mkdir /etc/zabbix/scripts/lib
+cp lib/ZabbixAPI.pm /etc/zabbix/scripts/lib
 
 
-cp zabbix_syslog_lkp_host.pl /usr/local/bin/zabbix_syslog_lkp_host.pl
-chmod +x /usr/local/bin/zabbix_syslog_lkp_host.pl
-
-cp zabbix_syslog.cfg /usr/local/etc/zabbix_syslog.cfg
-sudo chown zabbix:zabbix /usr/local/etc/zabbix_syslog.cfg
-sudo chmod 700 /usr/local/etc/zabbix_syslog.cfg
+cp zabbix_syslog.cfg /etc/zabbix/zabbix_syslog.cfg
+sudo chown zabbix:zabbix /etc/zabbix/zabbix_syslog.cfg
+sudo chmod 700 /etc/zabbix/zabbix_syslog.cfg
 ```
-edit `/usr/local/etc/zabbix_syslog.cfg`  
+edit `/etc/zabbix/zabbix_syslog.cfg`  
+
+##Copy crontab
+Next file updates syslog map links once a day.Copy it into your zabbix-server  
+```
+cp cron.d/zabbix_syslog_create_urls /etc/cron.d
+```
 
 ##rsyslog
 add file /etc/rsyslog.d/zabbix_rsyslog.conf with contents:  
@@ -61,7 +70,7 @@ $template network-fmt,"%TIMESTAMP:::date-rfc3339% [%fromhost-ip%] %pri-text% %sy
 :msg, contains, "password auth succeeded for 'ubnt' from ::ffff:10.2.0.21" ~
 :msg, contains, "password auth succeeded for 'ubnt' from" ~
 :msg, contains, "exit before auth: Exited normally" ~
-if $fromhost-ip != '127.0.0.1' then ^/usr/local/bin/zabbix_syslog_lkp_host.pl;network-fmt       
+if $fromhost-ip != '127.0.0.1' then ^/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl;network-fmt       
 if $fromhost-ip != '127.0.0.1' then /var/log/network.log;network-fmt
 & ~
 ```
@@ -74,6 +83,9 @@ $UDPServerRun 514
 ...to allow UDP Reception from the network (also check your firewall for UDP/514 btw)  
 
 ...and restart rsyslog  
+```
+service rsyslog restart 
+```
 
 ##Import template
 Import syslog template and attach it to hosts from which you expect syslog messages to come  

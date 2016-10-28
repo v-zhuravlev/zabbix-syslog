@@ -1,0 +1,3 @@
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+0 1 * * *  zabbix /etc/zabbix/scripts/zabbix_syslog_create_urls.pl 2>&1

@@ -19,7 +19,12 @@ our $VERSION = 2.0;
 my $CACHE_TIMEOUT = 600;
 my $CACHE_DIR     = '/tmp/zabbix_syslog_cache';
 
-my $conf   = Config::General->new('/usr/local/etc/zabbix_syslog.cfg');
+my $conf;
+$conf  = eval {Config::General->new('/usr/local/etc/zabbix_syslog.cfg')};
+if ($@) {
+        eval {$conf  = Config::General->new('/etc/zabbix/zabbix_syslog.cfg')};
+        if ($@) {die "Please check that config file is available as /usr/local/etc/zabbix_syslog.cfg or /etc/zabbix/zabbix_syslog.cfg\n";}
+}
 my %Config = $conf->getall;
 
 #Authenticate yourself
