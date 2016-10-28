@@ -14,7 +14,7 @@ use List::MoreUtils qw (any);
 use English '-no_match_vars';
 use MIME::Base64 qw(encode_base64);
 use IO::Socket::INET;
-our $VERSION = 2.0;
+our $VERSION = 2.1;
 
 my $CACHE_TIMEOUT = 600;
 my $CACHE_DIR     = '/tmp/zabbix_syslog_cache';
