@@ -65,7 +65,15 @@ if $fromhost-ip != '127.0.0.1' then ^/usr/local/bin/zabbix_syslog_lkp_host.pl;ne
 if $fromhost-ip != '127.0.0.1' then /var/log/network.log;network-fmt
 & ~
 ```
-and restart rsyslog  
+in /etc/rsyslog.conf uncomment these:  
+```
+# provides UDP syslog reception
+$ModLoad imudp
+$UDPServerRun 514
+```  
+...to allow UDP Reception from the network (also check your firewall for UDP/514 btw)  
+
+...and restart rsyslog  
 
 ##Import template
 Import syslog template and attach it to hosts from which you expect syslog messages to come  
