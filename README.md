@@ -1,4 +1,4 @@
-#About
+# About
 Scripts to get Syslog (protocol) messages into Zabbix from network devices, servers and others.  
 
 
@@ -12,13 +12,13 @@ Features include:
 - ip to host resolutions are cached to minimize the number of Zabbix API queries  
 - zabbix_sender here is in a form of a perl function, so no cli zabbix_sender tool is required      
 
-##Map context menu  
+## Map context menu  
 As a bonus, script `zabbix_syslog_create_urls.pl` can be used(and scheduled in cron for regular map link updates) to append a direct link into maps host menu for reading Syslog item values for each host that has syslog:  
 ![2013-12-30_152557](https://cloud.githubusercontent.com/assets/14870891/19680048/d248b76c-9aac-11e6-8a95-accd34794563.png)  
 Script will do no rewriting of existing host links, only appending to a list. Also link only added to hosts that has item with key 'syslog'.  
 
-#Setup  
-##Dependencies  
+# Setup  
+## Dependencies  
 
 The script is written in Perl and you will need common modules in order to run it:  
 ```
@@ -34,7 +34,7 @@ There are numerous ways to install them:
 |  `apt-get install libwww-perl libjson-xs-perl libchi-perl libconfig-general-perl` | `yum install perl-JSON-XS perl-libwww-perl perl-LWP-Protocol-https perl-Config-General` | `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Bundle::LWP'` and  `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::XS` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'` | `cpanm install LWP` and `cpanm install JSON::XS` and `cpanm install CHI` and `cpanm install Config::General`|  
 * No package for CHI in Centos 7. Use cpanm.  
 
-##Copy scripts  
+## Copy scripts  
 ```
 cp zabbix_syslog_create_urls.pl /etc/zabbix/scripts/zabbix_syslog_create_urls.pl
 chmod +x /etc/zabbix/scripts/zabbix_syslog_create_urls.pl
@@ -52,13 +52,13 @@ sudo chmod 700 /etc/zabbix/zabbix_syslog.cfg
 ```
 edit `/etc/zabbix/zabbix_syslog.cfg`  
 
-##Copy crontab
+## Copy crontab
 Next file updates syslog map links once a day.Copy it into your zabbix-server  
 ```
 cp cron.d/zabbix_syslog_create_urls /etc/cron.d
 ```
 
-##rsyslog
+## rsyslog
 add file /etc/rsyslog.d/zabbix_rsyslog.conf with contents:  
 ```
 $template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
@@ -88,8 +88,10 @@ $UDPServerRun 514
 service rsyslog restart 
 ```
 
-##Import template
+## Import template
 Import syslog template and attach it to hosts from which you expect syslog messages to come  
-
-#More info:  
-https://habrahabr.ru/company/zabbix/blog/252915/  
+# Troubleshooting
+Make sure that script `/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl` is exetuable under zabbix system user (run `su zabbix`).  
+Run it by hand to see that all perl modules are available under user `zabbix`  
+# More info:  
+https://habrahabr.ru/company/zabbix/blog/252915/  (RU)
