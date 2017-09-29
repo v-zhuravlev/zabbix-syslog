@@ -53,7 +53,7 @@ sudo chmod 700 /etc/zabbix/zabbix_syslog.cfg
 edit `/etc/zabbix/zabbix_syslog.cfg`  
 
 ## Copy crontab
-Next file updates syslog map links once a day.Copy it into your zabbix-server  
+Next file updates syslog map links once a day. Copy it into your zabbix-server  
 ```
 cp cron.d/zabbix_syslog_create_urls /etc/cron.d
 ```
