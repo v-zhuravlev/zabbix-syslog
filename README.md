@@ -31,7 +31,7 @@ There are numerous ways to install them:
 
 | in Debian  | In Centos* | using CPAN | using cpanm|  
 |------------|-----------|------------|------------|  
-|  `apt-get install libwww-perl libjson-xs-perl libchi-perl libconfig-general-perl` | `yum install perl-JSON-XS perl-libwww-perl perl-LWP-Protocol-https perl-Config-General` | `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Bundle::LWP'` and  `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::XS` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'` | `cpanm install LWP` and `cpanm install JSON::XS` and `cpanm install CHI` and `cpanm install Config::General`|  
+|  `apt-get install libwww-perl libjson-xs-perl libchi-perl libconfig-general-perl` | `yum install perl-JSON-XS perl-libwww-perl perl-LWP-Protocol-https perl-Config-General` | `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Bundle::LWP'` and  `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::XS'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'` | `cpanm install LWP` and `cpanm install JSON::XS` and `cpanm install CHI` and `cpanm install Config::General`|  
 * No package for CHI in Centos 7. Use cpanm.  
 
 ## Copy scripts  
