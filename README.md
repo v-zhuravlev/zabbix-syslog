@@ -91,7 +91,7 @@ service rsyslog restart
 ## Import template
 Import syslog template and attach it to hosts from which you expect syslog messages to come  
 # Troubleshooting
-Make sure that script `/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl` is exetuable under zabbix system user (run `su zabbix`).  
-Run it by hand to see that all perl modules are available under user `zabbix`  
+Make sure that script `/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl` is exetuable under rsyslog system user.  
+Run it by hand to see that all perl modules are available under that user (probably `root`).  
 # More info:  
 https://habrahabr.ru/company/zabbix/blog/252915/  (RU)
