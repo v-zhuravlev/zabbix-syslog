@@ -93,5 +93,12 @@ Import syslog template and attach it to hosts from which you expect syslog messa
 # Troubleshooting
 Make sure that script `/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl` is exetuable under rsyslog system user.  
 Run it by hand to see that all perl modules are available under that user (probably `root`).  
+Do the following test:
+ - In Zabbix create the test host with host interface of any type. Assign IP=127.0.0.1 to this host interface.  
+ - Attach Template Syslog to this host.  
+ - Under user `root` (or user that runs rsyslog):  
+`/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl "2017-12-19T09:26:26.314936+03:00 [127.0.0.1] syslog.info Test syslog message"`  
+then check that this message can be found in item with key = `syslog`.  
+
 # More info:  
 https://habrahabr.ru/company/zabbix/blog/252915/  (RU)
