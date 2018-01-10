@@ -93,12 +93,30 @@ Import syslog template and attach it to hosts from which you expect syslog messa
 # Troubleshooting
 Make sure that script `/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl` is exetuable under rsyslog system user.  
 Run it by hand to see that all perl modules are available under that user (probably `root`).  
+
+## Suggested Test 1  
 Do the following test:
  - In Zabbix create the test host with host interface of any type. Assign IP=127.0.0.1 to this host interface.  
  - Attach Template Syslog to this host.  
  - Under user `root` (or user that runs rsyslog):  
 `/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl "2017-12-19T09:26:26.314936+03:00 [127.0.0.1] syslog.info Test syslog message"`  
 then check that this message can be found in item with key = `syslog`.  
+
+## Suggested Test 2  
+ - Stop rsyslog daemon  
+ - run rsyslogd in the interactive mode: `rsyslogd -n`  
+ - open another terminal and send a test syslog message.    
+ - observe what actually script returns when processing this test syslog message.  
+ For example:  
+ ```
+ [root@zabbix-lab vagrant]# rsyslogd -n
+rsyslogd: error during config processing: STOP is followed by unreachable statements!  [v8.24.0 try http://www.rsyslog.com/e/2207 ]
+Can't locate CHI.pm in @INC (@INC contains: /etc/zabbix/scripts/lib /usr/local/lib64/perl5 /usr/local/share/perl5 /usr/lib64/perl5/vendor_perl /usr/share/perl5/vendor_perl /usr/lib64/perl5 /usr/share/perl5 .) at /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl line 11.
+BEGIN failed--compilation aborted at /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl line 11.
+rsyslogd: Child 15334 has terminated, reaped by main-loop. [v8.24.0 try http://www.rsyslog.com/e/0 
+```
+If this doesn't help, then try again this time running rsyslogd in the debug mode:
+`rsyslogd -dn`  
 
 # More info:  
 https://habrahabr.ru/company/zabbix/blog/252915/  (RU)
