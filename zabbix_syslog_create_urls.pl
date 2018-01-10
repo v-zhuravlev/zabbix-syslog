@@ -39,8 +39,7 @@ my $syslog_url_base = 'history.php?action=showvalues';
 
     foreach my $map ( @{ map_get_extended() } ) {
         my $mapid=$map->{sysmapid};
-        #next unless ($mapid == 120 or $mapid == 116); #debug
-       #put all mapelements into array @selements (so you can update map later!)
+        #put all map elements into array @selements (so you can update map later!)
         @selements = @{ $map->{selements} };
 
 	print "INFO: Checking map with mapid $map->{sysmapid}\n";
@@ -51,15 +50,23 @@ my $syslog_url_base = 'history.php?action=showvalues';
                 print 'Object ID: '
                   . $selement->{selementid}
                   . ' Type: '
-                  . $selement->{elementtype}
-                  . ' Elementid '
-                  . $selement->{elementid} . " \n";
+                  . $selement->{elementtype}."\n";
             }
 
             # elementtype=0 hosts
             if ( $selement->{elementtype} == 0 ) {
-
-                my $hostid = $selement->{elementid};
+                my $hostid;
+                #Zabbix API 3.4+
+                if (exists($selement->{elements}->[0]->{hostid})) {
+                    $hostid = $selement->{elements}->[0]->{hostid};
+                }
+                #Zabbix API before 3.4
+                elsif (exists($selement->{elementid})) {
+                    $hostid = $selement->{elementid};
+                }
+                else {
+                    die "Cannot get hostid of selement $selement->{selementid}\n";
+                }
 
                 my $itemid = get_syslogid_by_hostid($hostid);
                 if ($itemid) {
@@ -183,7 +190,7 @@ sub map_update {
         };
     my $result = $zbx->do('map.update',$params);
     if ( $debug > 0 ) {
-        print "About to map.update this\n:";
+        print "About to map.update this:\n";
         print Dumper $params;
     }
 
