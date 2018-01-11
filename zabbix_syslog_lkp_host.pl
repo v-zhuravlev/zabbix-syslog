@@ -51,7 +51,8 @@ if ( $message =~ / \[ ((?:$ipv4_octet[.]){3}${ipv4_octet}) \]/msx ) {
     $ip = $1;
 }
 else {
-    die "No IP in square brackets found in '$message', cannot continue\n";
+    warn "No IP in square brackets found in '$message', cannot continue\n";
+    next;
 }
 
 my $hostname = ${retrieve_from_store($ip)}->{'hostname'};
@@ -67,6 +68,7 @@ $zbx->login();
 
     my @hosts_found;
     my $hostid;
+    my @hostinterfaces;
     eval {@hostinterfaces=hostinterface_get($ip)};
     if($@){
         warn "Failed to retrieve any host interface with IP = $ip. Unable to bind message to item, skipping\n";
@@ -257,12 +259,14 @@ sub retrieve_from_store {
         $stored = lock_retrieve $storage_file;
 
         #remove expired from cache
-        if (time() - $stored->{$ip}->{created} > $CACHE_TIMEOUT){
-            delete $stored->{$ip};
-            lock_store $stored, $storage_file;                
-        }
-        else {
-            $message_to_retrieve = $stored->{$ip};
+        if (defined($stored->{$ip})){
+            if (time() - $stored->{$ip}->{created} > $CACHE_TIMEOUT){
+                delete $stored->{$ip};
+                lock_store $stored, $storage_file;                
+            }
+            else {
+                $message_to_retrieve = $stored->{$ip};
+            }
         }
     }
 
