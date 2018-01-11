@@ -59,27 +59,27 @@ cp cron.d/zabbix_syslog_create_urls /etc/cron.d
 ## rsyslog
 add file /etc/rsyslog.d/zabbix_rsyslog.conf with contents:  
 ```
-$template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
-$template network-fmt,"%TIMESTAMP:::date-rfc3339% [%fromhost-ip%] %pri-text% %syslogtag%%msg%\n"
-
-
-#exclude unwanted messages:
-:msg, contains, "Child connection from" stop
-:msg, contains, "exit after auth (ubnt): Disconnect received" stop
-:msg, contains, "password auth succeeded for 'ubnt' from ::ffff:10.2.0.21" stop
-:msg, contains, "password auth succeeded for 'ubnt' from" stop
-:msg, contains, "exit before auth: Exited normally" stop
-if $fromhost-ip != '127.0.0.1' then ^/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl;network-fmt       
-if $fromhost-ip != '127.0.0.1' then /var/log/network.log;network-fmt
-& stop
-```
-in /etc/rsyslog.conf uncomment these:  
-```
 # provides UDP syslog reception
 $ModLoad imudp
 $UDPServerRun 514
-```  
-...to allow UDP Reception from the network (also check your firewall for UDP/514 btw)  
+
+#enables omrpog module
+$ModLoad omprog
+
+$template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
+$template network-fmt,"%TIMESTAMP:::date-rfc3339% [%fromhost-ip%] %pri-text% %syslogtag%%msg%\n"
+
+#exclude unwanted messages(examples):
+:msg, contains, "Child connection from" stop
+:msg, contains, "exit after auth (ubnt): Disconnect received" stop
+:msg, contains, "password auth succeeded for 'ubnt' from" stop
+:msg, contains, "exit before auth: Exited normally" stop
+if $fromhost-ip != '127.0.0.1' then {
+        action(type="omprog" binary="/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl" template="network-fmt")
+        stop
+}
+```
+(also check your firewall for UDP/514 btw)  
 
 ...and restart rsyslog  
 ```

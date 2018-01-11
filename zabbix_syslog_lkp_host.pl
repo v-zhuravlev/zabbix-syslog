@@ -36,16 +36,16 @@ my $zbx;
 
 my $debug = $Config{'debug'};
 my ( $authID, $response, $json );
+#IP regex patter part
+my $ipv4_octet = q/(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
 
-my $message = shift @ARGV   || die
-  "Syslog message required as an argument\n";  #Grab syslog message from rsyslog
+#rsyslog omprog loop
+#http://www.rsyslog.com/doc/master/configuration/modules/omprog.html
+while (defined(my $message = <>)) {
 chomp($message);
 
 #get ip from message
 my $ip;
-
-#IP regex patter part
-my $ipv4_octet = q/(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
 
 if ( $message =~ / \[ ((?:$ipv4_octet[.]){3}${ipv4_octet}) \]/msx ) {
     $ip = $1;
@@ -67,7 +67,14 @@ $zbx->login();
 
     my @hosts_found;
     my $hostid;
-    foreach my $host ( hostinterface_get($ip)) {
+    eval {@hostinterfaces=hostinterface_get($ip)};
+    if($@){
+        warn "Failed to retrieve any host interface with IP = $ip. Unable to bind message to item, skipping\n";
+        next;
+    }
+
+    foreach my $host (@hostinterfaces) {
+
 
         $hostid = $host->{'hostid'};
         if ( any { /$hostid/msx } @hosts_found ) {
@@ -102,7 +109,7 @@ $zbx->login();
 }
 
 zabbix_send( $server, $hostname, 'syslog', $message );
-
+}
 #______SUBS
 
 sub hostinterface_get {
