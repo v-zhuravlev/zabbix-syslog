@@ -8,16 +8,16 @@ use FindBin qw($Bin);
 use lib "$Bin/lib";
 use Data::Dumper;
 use Config::General;
-use CHI;
 use ZabbixAPI;
 use List::MoreUtils qw (any);
 use English '-no_match_vars';
 use MIME::Base64 qw(encode_base64);
 use IO::Socket::INET;
-our $VERSION = 2.1;
+use Storable qw(lock_store lock_retrieve);
+our $VERSION = 3.0;
 
 my $CACHE_TIMEOUT = 600;
-my $CACHE_DIR     = '/tmp/zabbix_syslog_cache';
+my $CACHE_DIR     = '/tmp/zabbix_syslog_cache_n';
 
 my $conf;
 $conf  = eval {Config::General->new('/usr/local/etc/zabbix_syslog.cfg')};
@@ -36,87 +36,90 @@ my $zbx;
 
 my $debug = $Config{'debug'};
 my ( $authID, $response, $json );
-
-my $message = shift @ARGV   || die
-  "Syslog message required as an argument\n";  #Grab syslog message from rsyslog
-chomp($message);
-
-#get ip from message
-my $ip;
-
 #IP regex patter part
 my $ipv4_octet = q/(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
 
-if ( $message =~ / \[ ((?:$ipv4_octet[.]){3}${ipv4_octet}) \]/msx ) {
-    $ip = $1;
-}
-else {
-    die "No IP in square brackets found in '$message', cannot continue\n";
-}
+#rsyslog omprog loop
+#http://www.rsyslog.com/doc/master/configuration/modules/omprog.html
+while (defined(my $message = <>)) {
+    chomp($message);
 
-my $cache = CHI->new(
-    driver   => 'File',
-    root_dir => $CACHE_DIR,
-);
+    #get ip from message
+    my $ip;
 
-my $hostname = $cache->get($ip);
+    if ( $message =~ / \[ ((?:$ipv4_octet[.]){3}${ipv4_octet}) \]/msx ) {
+        $ip = $1;
+    }
+    else {
+        warn "No IP in square brackets found in '$message', cannot continue\n";
+        next;
+    }
 
-if ( !defined $hostname ) {
-
-my $result;
-
-$zbx = ZabbixAPI->new( { api_url => $url, username => $user, password => $password } );
-$zbx->login();
+    my $hostname = ${retrieve_from_store($ip)}->{'hostname'};
 
 
-#    $authID = login();
-    my @hosts_found;
-    my $hostid;
-    foreach my $host ( hostinterface_get($ip)) {
+    if ( !defined $hostname ) {
 
-        $hostid = $host->{'hostid'};
-        if ( any { /$hostid/msx } @hosts_found ) {
+        my $result;
+
+        $zbx = ZabbixAPI->new( { api_url => $url, username => $user, password => $password } );
+        $zbx->login();
+
+
+        my @hosts_found;
+        my $hostid;
+        my @hostinterfaces;
+        eval {@hostinterfaces=hostinterface_get($ip)};
+        if($@){
+            warn "Failed to retrieve any host interface with IP = $ip. Unable to bind message to item, skipping\n";
             next;
-        }    #check if $hostid already is in array then skip(next)
-        else { push @hosts_found, $hostid; }
+        }
 
-###########now get hostname
-        if ( get_zbx_trapper_syslogid_by_hostid($hostid) ) {
+        foreach my $host (@hostinterfaces) {
 
-            my $result = host_get($hostid);
+            $hostid = $host->{'hostid'};
+            if ( any { /$hostid/msx } @hosts_found ) {
+                next;
+            }    #check if $hostid already is in array then skip(next)
+            else { push @hosts_found, $hostid; }
 
-            #return hostname if possible
-            if ( $result->{'host'} ) {
+            #now get hostname
+            if ( get_zbx_trapper_syslogid_by_hostid($hostid) ) {
 
-                if ( $result->{'proxy_hostid'} == 0 )    #check if host monitored directly or via proxy
-                {
-                    #lease $server as is
+                my $result = host_get($hostid);
+
+                #return hostname if possible
+                if ( $result->{'host'} ) {
+
+                    if ( $result->{'proxy_hostid'} == 0 )    #check if host monitored directly or via proxy
+                    {
+                        #lease $server as is
+                    }
+                    else {
+                    #assume that rsyslogd and zabbix_proxy are on the same server
+                        $server = 'localhost';
+                    }
+                    $hostname = $result->{'host'};
                 }
-                else {
-                   #assume that rsyslogd and zabbix_proxy are on the same server
-                    $server = 'localhost';
-                }
-                $hostname = $result->{'host'};
+
             }
 
         }
-
+        $zbx->logout();
+        store_message( $ip, $hostname );
     }
-    $zbx->logout();
-    $cache->set( $ip, $hostname, $CACHE_TIMEOUT );
+
+    zabbix_send( $server, $hostname, 'syslog', $message );
 }
 
-zabbix_send( $server, $hostname, 'syslog', $message );
 
 #______SUBS
-
 sub hostinterface_get {
 
     my $ip = shift;
     my $params = {
             output => [ 'ip', 'hostid' ],
-            filter => { ip => $ip, },
-            #    limit => 1,
+            filter => { ip => $ip, }
     };
     
     my $result = $zbx->do('hostinterface.get',$params);
@@ -216,4 +219,56 @@ sub zabbix_send {
     }
     $sock->close();
     return;
+}
+
+#helpers
+sub store_message {
+    my $ip            = shift;
+    my $hostname      = shift;
+    my $storage_file = $CACHE_DIR;
+    my ( $stored, $to_store );
+
+    $to_store->{$ip} = {
+                        hostname => $hostname,
+                        created   => time()
+                        };
+    
+
+    if ( -f $storage_file ) {
+        $stored = lock_retrieve $storage_file;
+        lock_store { %{$stored}, %{$to_store} }, $storage_file;
+    }
+    else {
+
+#first time file creation, apply proper file permissions and store only single event
+        lock_store $to_store, $storage_file;
+        chmod 0666, $storage_file;
+    }
+
+}
+
+sub retrieve_from_store {
+    my $ip           = shift;
+    my $storage_file = $CACHE_DIR;
+    my $stored;
+    my $message_to_retrieve;
+
+    if ( -f $storage_file ) {
+
+        $stored = lock_retrieve $storage_file;
+
+        #remove expired from cache
+        if (defined($stored->{$ip})){
+            if (time() - $stored->{$ip}->{created} > $CACHE_TIMEOUT){
+                delete $stored->{$ip};
+                lock_store $stored, $storage_file;                
+            }
+            else {
+                $message_to_retrieve = $stored->{$ip};
+            }
+        }
+    }
+
+    return \$message_to_retrieve;
+
 }

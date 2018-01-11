@@ -24,15 +24,13 @@ The script is written in Perl and you will need common modules in order to run i
 ```
 LWP
 JSON::XS
-CHI
 Config::General
 ```
 There are numerous ways to install them:  
 
-| in Debian  | In Centos* | using CPAN | using cpanm|  
+| in Debian  | In Centos | using CPAN | using cpanm|  
 |------------|-----------|------------|------------|  
-|  `apt-get install libwww-perl libjson-xs-perl libchi-perl libconfig-general-perl` | `yum install perl-JSON-XS perl-libwww-perl perl-LWP-Protocol-https perl-Config-General perl-CPAN` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'` | `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Bundle::LWP'` and  `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::XS'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'` | `cpanm install LWP` and `cpanm install JSON::XS` and `cpanm install CHI` and `cpanm install Config::General`|  
-* No package for CHI in Centos 7. Use CPAN.  
+|  `apt-get install libwww-perl libjson-xs-perl libconfig-general-perl` | `yum install perl-JSON-XS perl-libwww-perl perl-LWP-Protocol-https perl-Config-General` | `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Bundle::LWP'` and  `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::XS'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'` | `cpanm install LWP` and `cpanm install JSON::XS` and `cpanm install Config::General`|  
 
 ## Copy scripts  
 ```
@@ -61,27 +59,27 @@ cp cron.d/zabbix_syslog_create_urls /etc/cron.d
 ## rsyslog
 add file /etc/rsyslog.d/zabbix_rsyslog.conf with contents:  
 ```
-$template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
-$template network-fmt,"%TIMESTAMP:::date-rfc3339% [%fromhost-ip%] %pri-text% %syslogtag%%msg%\n"
-
-
-#exclude unwanted messages:
-:msg, contains, "Child connection from" ~
-:msg, contains, "exit after auth (ubnt): Disconnect received" ~
-:msg, contains, "password auth succeeded for 'ubnt' from ::ffff:10.2.0.21" ~
-:msg, contains, "password auth succeeded for 'ubnt' from" ~
-:msg, contains, "exit before auth: Exited normally" ~
-if $fromhost-ip != '127.0.0.1' then ^/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl;network-fmt       
-if $fromhost-ip != '127.0.0.1' then /var/log/network.log;network-fmt
-& ~
-```
-in /etc/rsyslog.conf uncomment these:  
-```
 # provides UDP syslog reception
 $ModLoad imudp
 $UDPServerRun 514
-```  
-...to allow UDP Reception from the network (also check your firewall for UDP/514 btw)  
+
+#enables omrpog module
+$ModLoad omprog
+
+$template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
+$template network-fmt,"%TIMESTAMP:::date-rfc3339% [%fromhost-ip%] %pri-text% %syslogtag%%msg%\n"
+
+#exclude unwanted messages(examples):
+:msg, contains, "Child connection from" stop
+:msg, contains, "exit after auth (ubnt): Disconnect received" stop
+:msg, contains, "password auth succeeded for 'ubnt' from" stop
+:msg, contains, "exit before auth: Exited normally" stop
+if $fromhost-ip != '127.0.0.1' then {
+        action(type="omprog" binary="/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl" template="network-fmt")
+        stop
+}
+```
+(also check your firewall for UDP/514 btw)  
 
 ...and restart rsyslog  
 ```
@@ -93,12 +91,34 @@ Import syslog template and attach it to hosts from which you expect syslog messa
 # Troubleshooting
 Make sure that script `/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl` is exetuable under rsyslog system user.  
 Run it by hand to see that all perl modules are available under that user (probably `root`).  
+
+## Suggested Test 1  
 Do the following test:
  - In Zabbix create the test host with host interface of any type. Assign IP=127.0.0.1 to this host interface.  
  - Attach Template Syslog to this host.  
  - Under user `root` (or user that runs rsyslog):  
-`/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl "2017-12-19T09:26:26.314936+03:00 [127.0.0.1] syslog.info Test syslog message"`  
+`/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl`
+then type some test message like so:  
+`2017-12-19T09:26:26.314936+03:00 [127.0.0.1] syslog.info Test syslog message`  
 then check that this message can be found in item with key = `syslog`.  
+
+## Suggested Test 2  
+ - Stop rsyslog daemon  
+ - run rsyslogd in the interactive mode: `rsyslogd -n`  
+ - open another terminal and send a test syslog message connecting to IP address other than 127.0.0.1:  
+ `logger -n 192.168.56.15`.  
+ - then type some test message like so: `hello world`  
+ - observe what actually script returns when processing this test syslog message.  
+ For example:  
+ ```
+ [root@zabbix-lab vagrant]# rsyslogd -n
+rsyslogd: error during config processing: STOP is followed by unreachable statements!  [v8.24.0 try http://www.rsyslog.com/e/2207 ]
+Can't locate ZabbixAPI.pm in @INC (@INC contains: /etc/zabbix/scripts/lib /usr/local/lib64/perl5 /usr/local/share/perl5 /usr/lib64/perl5/vendor_perl /usr/share/perl5/vendor_perl /usr/lib64/perl5 /usr/share/perl5 .) at /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl line 11.
+BEGIN failed--compilation aborted at /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl line 11.
+rsyslogd: Child 15334 has terminated, reaped by main-loop. [v8.24.0 try http://www.rsyslog.com/e/0 
+```
+If this doesn't help, then try again this time running rsyslogd in the debug mode:
+`rsyslogd -dn`  
 
 # More info:  
 https://habrahabr.ru/company/zabbix/blog/252915/  (RU)
