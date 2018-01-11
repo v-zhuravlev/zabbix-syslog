@@ -66,14 +66,14 @@ $template network-fmt,"%TIMESTAMP:::date-rfc3339% [%fromhost-ip%] %pri-text% %sy
 
 
 #exclude unwanted messages:
-:msg, contains, "Child connection from" ~
-:msg, contains, "exit after auth (ubnt): Disconnect received" ~
-:msg, contains, "password auth succeeded for 'ubnt' from ::ffff:10.2.0.21" ~
-:msg, contains, "password auth succeeded for 'ubnt' from" ~
-:msg, contains, "exit before auth: Exited normally" ~
+:msg, contains, "Child connection from" stop
+:msg, contains, "exit after auth (ubnt): Disconnect received" stop
+:msg, contains, "password auth succeeded for 'ubnt' from ::ffff:10.2.0.21" stop
+:msg, contains, "password auth succeeded for 'ubnt' from" stop
+:msg, contains, "exit before auth: Exited normally" stop
 if $fromhost-ip != '127.0.0.1' then ^/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl;network-fmt       
 if $fromhost-ip != '127.0.0.1' then /var/log/network.log;network-fmt
-& ~
+& stop
 ```
 in /etc/rsyslog.conf uncomment these:  
 ```
