@@ -24,15 +24,13 @@ The script is written in Perl and you will need common modules in order to run i
 ```
 LWP
 JSON::XS
-CHI
 Config::General
 ```
 There are numerous ways to install them:  
 
-| in Debian  | In Centos* | using CPAN | using cpanm|  
+| in Debian  | In Centos | using CPAN | using cpanm|  
 |------------|-----------|------------|------------|  
-|  `apt-get install libwww-perl libjson-xs-perl libchi-perl libconfig-general-perl` | `yum install perl-JSON-XS perl-libwww-perl perl-LWP-Protocol-https perl-Config-General perl-CPAN` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'` | `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Bundle::LWP'` and  `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::XS'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install CHI'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'` | `cpanm install LWP` and `cpanm install JSON::XS` and `cpanm install CHI` and `cpanm install Config::General`|  
-* No package for CHI in Centos 7. Use CPAN.  
+|  `apt-get install libwww-perl libjson-xs-perl libconfig-general-perl` | `yum install perl-JSON-XS perl-libwww-perl perl-LWP-Protocol-https perl-Config-General` | `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Bundle::LWP'` and  `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install JSON::XS'` and `PERL_MM_USE_DEFAULT=1 perl -MCPAN -e 'install Config::General'` | `cpanm install LWP` and `cpanm install JSON::XS` and `cpanm install Config::General`|  
 
 ## Copy scripts  
 ```
@@ -111,7 +109,7 @@ then check that this message can be found in item with key = `syslog`.
  ```
  [root@zabbix-lab vagrant]# rsyslogd -n
 rsyslogd: error during config processing: STOP is followed by unreachable statements!  [v8.24.0 try http://www.rsyslog.com/e/2207 ]
-Can't locate CHI.pm in @INC (@INC contains: /etc/zabbix/scripts/lib /usr/local/lib64/perl5 /usr/local/share/perl5 /usr/lib64/perl5/vendor_perl /usr/share/perl5/vendor_perl /usr/lib64/perl5 /usr/share/perl5 .) at /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl line 11.
+Can't locate ZabbixAPI.pm in @INC (@INC contains: /etc/zabbix/scripts/lib /usr/local/lib64/perl5 /usr/local/share/perl5 /usr/lib64/perl5/vendor_perl /usr/share/perl5/vendor_perl /usr/lib64/perl5 /usr/share/perl5 .) at /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl line 11.
 BEGIN failed--compilation aborted at /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl line 11.
 rsyslogd: Child 15334 has terminated, reaped by main-loop. [v8.24.0 try http://www.rsyslog.com/e/0 
 ```

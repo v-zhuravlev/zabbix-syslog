@@ -8,16 +8,16 @@ use FindBin qw($Bin);
 use lib "$Bin/lib";
 use Data::Dumper;
 use Config::General;
-use CHI;
 use ZabbixAPI;
 use List::MoreUtils qw (any);
 use English '-no_match_vars';
 use MIME::Base64 qw(encode_base64);
 use IO::Socket::INET;
+use Storable qw(lock_store lock_retrieve);
 our $VERSION = 2.1;
 
 my $CACHE_TIMEOUT = 600;
-my $CACHE_DIR     = '/tmp/zabbix_syslog_cache';
+my $CACHE_DIR     = '/tmp/zabbix_syslog_cache_n';
 
 my $conf;
 $conf  = eval {Config::General->new('/usr/local/etc/zabbix_syslog.cfg')};
@@ -54,12 +54,8 @@ else {
     die "No IP in square brackets found in '$message', cannot continue\n";
 }
 
-my $cache = CHI->new(
-    driver   => 'File',
-    root_dir => $CACHE_DIR,
-);
+my $hostname = ${retrieve_from_store($ip)}->{'hostname'};
 
-my $hostname = $cache->get($ip);
 
 if ( !defined $hostname ) {
 
@@ -69,7 +65,6 @@ $zbx = ZabbixAPI->new( { api_url => $url, username => $user, password => $passwo
 $zbx->login();
 
 
-#    $authID = login();
     my @hosts_found;
     my $hostid;
     foreach my $host ( hostinterface_get($ip)) {
@@ -103,7 +98,7 @@ $zbx->login();
 
     }
     $zbx->logout();
-    $cache->set( $ip, $hostname, $CACHE_TIMEOUT );
+    store_message( $ip, $hostname );
 }
 
 zabbix_send( $server, $hostname, 'syslog', $message );
@@ -216,4 +211,54 @@ sub zabbix_send {
     }
     $sock->close();
     return;
+}
+
+#helpers
+sub store_message {
+    my $ip            = shift;
+    my $hostname      = shift;
+    my $storage_file = $CACHE_DIR;
+    my ( $stored, $to_store );
+
+    $to_store->{$ip} = {
+                        hostname => $hostname,
+                        created   => time()
+                        };
+    
+
+    if ( -f $storage_file ) {
+        $stored = lock_retrieve $storage_file;
+        lock_store { %{$stored}, %{$to_store} }, $storage_file;
+    }
+    else {
+
+#first time file creation, apply proper file permissions and store only single event
+        lock_store $to_store, $storage_file;
+        chmod 0666, $storage_file;
+    }
+
+}
+
+sub retrieve_from_store {
+    my $ip           = shift;
+    my $storage_file = $CACHE_DIR;
+    my $stored;
+    my $message_to_retrieve;
+
+    if ( -f $storage_file ) {
+
+        $stored = lock_retrieve $storage_file;
+
+        #remove expired from cache
+        if (time() - $stored->{$ip}->{created} > $CACHE_TIMEOUT){
+            delete $stored->{$ip};
+            lock_store $stored, $storage_file;                
+        }
+        else {
+            $message_to_retrieve = $stored->{$ip};
+        }
+    }
+
+    return \$message_to_retrieve;
+
 }
