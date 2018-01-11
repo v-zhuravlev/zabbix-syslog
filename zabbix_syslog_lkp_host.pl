@@ -14,7 +14,7 @@ use English '-no_match_vars';
 use MIME::Base64 qw(encode_base64);
 use IO::Socket::INET;
 use Storable qw(lock_store lock_retrieve);
-our $VERSION = 2.1;
+our $VERSION = 3.0;
 
 my $CACHE_TIMEOUT = 600;
 my $CACHE_DIR     = '/tmp/zabbix_syslog_cache_n';
@@ -42,85 +42,84 @@ my $ipv4_octet = q/(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
 #rsyslog omprog loop
 #http://www.rsyslog.com/doc/master/configuration/modules/omprog.html
 while (defined(my $message = <>)) {
-chomp($message);
+    chomp($message);
 
-#get ip from message
-my $ip;
+    #get ip from message
+    my $ip;
 
-if ( $message =~ / \[ ((?:$ipv4_octet[.]){3}${ipv4_octet}) \]/msx ) {
-    $ip = $1;
-}
-else {
-    warn "No IP in square brackets found in '$message', cannot continue\n";
-    next;
-}
-
-my $hostname = ${retrieve_from_store($ip)}->{'hostname'};
-
-
-if ( !defined $hostname ) {
-
-my $result;
-
-$zbx = ZabbixAPI->new( { api_url => $url, username => $user, password => $password } );
-$zbx->login();
-
-
-    my @hosts_found;
-    my $hostid;
-    my @hostinterfaces;
-    eval {@hostinterfaces=hostinterface_get($ip)};
-    if($@){
-        warn "Failed to retrieve any host interface with IP = $ip. Unable to bind message to item, skipping\n";
+    if ( $message =~ / \[ ((?:$ipv4_octet[.]){3}${ipv4_octet}) \]/msx ) {
+        $ip = $1;
+    }
+    else {
+        warn "No IP in square brackets found in '$message', cannot continue\n";
         next;
     }
 
-    foreach my $host (@hostinterfaces) {
+    my $hostname = ${retrieve_from_store($ip)}->{'hostname'};
 
 
-        $hostid = $host->{'hostid'};
-        if ( any { /$hostid/msx } @hosts_found ) {
+    if ( !defined $hostname ) {
+
+        my $result;
+
+        $zbx = ZabbixAPI->new( { api_url => $url, username => $user, password => $password } );
+        $zbx->login();
+
+
+        my @hosts_found;
+        my $hostid;
+        my @hostinterfaces;
+        eval {@hostinterfaces=hostinterface_get($ip)};
+        if($@){
+            warn "Failed to retrieve any host interface with IP = $ip. Unable to bind message to item, skipping\n";
             next;
-        }    #check if $hostid already is in array then skip(next)
-        else { push @hosts_found, $hostid; }
+        }
 
-###########now get hostname
-        if ( get_zbx_trapper_syslogid_by_hostid($hostid) ) {
+        foreach my $host (@hostinterfaces) {
 
-            my $result = host_get($hostid);
+            $hostid = $host->{'hostid'};
+            if ( any { /$hostid/msx } @hosts_found ) {
+                next;
+            }    #check if $hostid already is in array then skip(next)
+            else { push @hosts_found, $hostid; }
 
-            #return hostname if possible
-            if ( $result->{'host'} ) {
+            #now get hostname
+            if ( get_zbx_trapper_syslogid_by_hostid($hostid) ) {
 
-                if ( $result->{'proxy_hostid'} == 0 )    #check if host monitored directly or via proxy
-                {
-                    #lease $server as is
+                my $result = host_get($hostid);
+
+                #return hostname if possible
+                if ( $result->{'host'} ) {
+
+                    if ( $result->{'proxy_hostid'} == 0 )    #check if host monitored directly or via proxy
+                    {
+                        #lease $server as is
+                    }
+                    else {
+                    #assume that rsyslogd and zabbix_proxy are on the same server
+                        $server = 'localhost';
+                    }
+                    $hostname = $result->{'host'};
                 }
-                else {
-                   #assume that rsyslogd and zabbix_proxy are on the same server
-                    $server = 'localhost';
-                }
-                $hostname = $result->{'host'};
+
             }
 
         }
-
+        $zbx->logout();
+        store_message( $ip, $hostname );
     }
-    $zbx->logout();
-    store_message( $ip, $hostname );
+
+    zabbix_send( $server, $hostname, 'syslog', $message );
 }
 
-zabbix_send( $server, $hostname, 'syslog', $message );
-}
+
 #______SUBS
-
 sub hostinterface_get {
 
     my $ip = shift;
     my $params = {
             output => [ 'ip', 'hostid' ],
-            filter => { ip => $ip, },
-            #    limit => 1,
+            filter => { ip => $ip, }
     };
     
     my $result = $zbx->do('hostinterface.get',$params);
