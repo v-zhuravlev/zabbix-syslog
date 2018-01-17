@@ -9,7 +9,6 @@ use lib "$Bin/lib";
 use Data::Dumper;
 use Config::General;
 use ZabbixAPI;
-use List::MoreUtils qw (any);
 use English '-no_match_vars';
 use MIME::Base64 qw(encode_base64);
 use IO::Socket::INET;
@@ -78,9 +77,9 @@ while (defined(my $message = <>)) {
         foreach my $host (@hostinterfaces) {
 
             $hostid = $host->{'hostid'};
-            if ( any { /$hostid/msx } @hosts_found ) {
+            if ( grep { /$hostid/msx } @hosts_found ) {
                 next;
-            }    #check if $hostid already is in array then skip(next)
+            }#check if $hostid already is in array then skip(next)
             else { push @hosts_found, $hostid; }
 
             #now get hostname
