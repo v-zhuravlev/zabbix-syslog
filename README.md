@@ -34,6 +34,7 @@ There are numerous ways to install them:
 
 ## Copy scripts  
 ```
+mkdir -p /etc/zabbix/scripts
 cp zabbix_syslog_create_urls.pl /etc/zabbix/scripts/zabbix_syslog_create_urls.pl
 chmod +x /etc/zabbix/scripts/zabbix_syslog_create_urls.pl
 
