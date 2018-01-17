@@ -9,7 +9,7 @@ Scripts to get Syslog (protocol) messages into Zabbix from network devices, serv
 
 
 Features include:  
-- ip to host resolutions are cached to minimize the number of Zabbix API queries  
+- IP to host resolutions are cached to minimize the number of Zabbix API queries  
 - zabbix_sender here is in a form of a perl function, so no cli zabbix_sender tool is required      
 
 ## Map context menu  
@@ -88,6 +88,13 @@ service rsyslog restart
 
 ## Import template
 Import syslog template and attach it to hosts from which you expect syslog messages to come  
+
+## Create user in Zabbix frontend for syslog  
+NOTE: you can use your admin user for testing  
+It is recommended to create separate user in order to retreive hostnames and check syslog items existence via Zabbix API. 
+Simple user with READ permissions for each Host group should be enough.
+If you use map context menu script `zabbix_syslog_create_urls.pl` then also check for write permessions to maps.  
+
 # Troubleshooting
 Make sure that script `/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl` is exetuable under rsyslog system user.  
 Run it by hand to see that all perl modules are available under that user (probably `root`).  
