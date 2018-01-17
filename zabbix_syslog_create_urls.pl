@@ -9,7 +9,7 @@ use lib "$Bin/lib";
 use Data::Dumper;
 use Config::General;
 use ZabbixAPI;
-our $VERSION = 3.0;
+our $VERSION = 3.1;
 my $conf;
 $conf  = eval {Config::General->new('/usr/local/etc/zabbix_syslog.cfg')};
 if ($@) {

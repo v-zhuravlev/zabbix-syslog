@@ -13,7 +13,7 @@ use English '-no_match_vars';
 use MIME::Base64 qw(encode_base64);
 use IO::Socket::INET;
 use Storable qw(lock_store lock_retrieve);
-our $VERSION = 3.0;
+our $VERSION = 3.1;
 
 my $CACHE_TIMEOUT = 600;
 my $CACHE_DIR     = '/tmp/zabbix_syslog_cache_n';
