@@ -17,7 +17,7 @@ our $VERSION = 3.1;
 
 my $CACHE_TIMEOUT = 600;
 my $CACHE_DIR     = '/tmp/zabbix_syslog_cache_n';
-
+die "No argumets required anymore since script version 3.0\n" if @ARGV > 0;
 my $conf;
 $conf  = eval {Config::General->new('/usr/local/etc/zabbix_syslog.cfg')};
 if ($@) {
