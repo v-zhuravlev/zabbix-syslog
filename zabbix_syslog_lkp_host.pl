@@ -95,12 +95,12 @@ while (defined(my $message = <>)) {
                         #lease $server as is
                     }
                     else {
-                    #assume that rsyslogd and zabbix_proxy are on the same server
+                        #assume that rsyslogd and zabbix_proxy are on the same server
                         $server = 'localhost';
                     }
                     $hostname = $result->{'host'};
                 }
-
+                last;
             }
 
         }
@@ -151,8 +151,7 @@ sub get_zbx_trapper_syslogid_by_hostid {
     if ( $debug > 0 ) { print Dumper $result; }
     # Check if response was successful
     if ( !@{ $result } ) {
-        $zbx->logout();
-        die "item.get failed\n";
+        warn "item.get failed\n";
     }
     #return itemid of syslog key (trapper type)
     return ${ $result }[0]->{itemid};
