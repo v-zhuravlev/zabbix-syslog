@@ -204,7 +204,7 @@ sub zabbix_send {
     die "Could not create socket: $ERRNO\n" unless $sock;
     $sock->send($request);
     my @handles = IO::Select->new($sock)->can_read($SOCK_TIMEOUT);
-    if ( $debug > 0 ) { print "item - $item, data - $data\n"; }
+    if ( $debug > 0 ) { print "host - $hostname, item - $item, data - $data\n"; }
 
     if ( scalar(@handles) > 0 ) {
         $sock->recv( $result, $SOCK_RECV_LENGTH );
