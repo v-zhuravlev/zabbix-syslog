@@ -187,20 +187,21 @@ sub map_update {
             selements => [@{$selements_ref}],
             sysmapid  => $mapid,
         };
-    my $result = $zbx->do('map.update',$params);
-    if ( $debug > 0 ) {
-        print "About to map.update this:\n";
-        print Dumper $params;
+    my $result;
+    eval {$result=$zbx->do('map.update',$params);};
+    if($@){
+        warn "Failed to update map with mapid $mapid, check for write permissions for this map\n";
+    }
+    else {
+        if ( $debug > 0 ) {
+            print "About to map.update this\n:";
+            print Dumper $params;
+        }
+
+        if ( $debug > 0 ) {
+            print Dumper $result;
+        }
     }
 
-    if ( $debug > 0 ) {
-        print Dumper $result;
-    }
-
-    # Check if response was successful
-    if ( !$result ) {
-        $zbx->logout();
-        die "map.update failed\n";
-    }
     return;
 }
