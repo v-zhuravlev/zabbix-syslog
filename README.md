@@ -105,9 +105,7 @@ Do the following test:
  - In Zabbix create the test host with host interface of any type. Assign IP=127.0.0.1 to this host interface.  
  - Attach Template Syslog to this host.  
  - Under user `root` (or user that runs rsyslog):  
-`/etc/zabbix/scripts/zabbix_syslog_lkp_host.pl`
-then type some test message like so:  
-`2017-12-19T09:26:26.314936+03:00 [127.0.0.1] syslog.info Test syslog message`  
+`echo "2017-12-19T09:26:26.314936+03:00 [127.0.0.1] syslog.info SysLogTest[4616]Test syslog message" | /etc/zabbix/scripts/zabbix_syslog_lkp_host.pl`
 then check that this message can be found in item with key = `syslog`.  
 
 ## Suggested Test 2  
