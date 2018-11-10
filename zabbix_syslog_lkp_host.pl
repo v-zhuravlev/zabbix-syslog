@@ -13,7 +13,7 @@ use English '-no_match_vars';
 use MIME::Base64 qw(encode_base64);
 use IO::Socket::INET;
 use Storable qw(lock_store lock_retrieve);
-our $VERSION = 3.1;
+our $VERSION = 4.0;
 
 my $CACHE_TIMEOUT = 600;
 my $CACHE_DIR     = '/tmp/zabbix_syslog_cache_n';
@@ -193,6 +193,7 @@ sub zabbix_send {
       sprintf
       "<req>\n<host>%s</host>\n<key>%s</key>\n<data>%s</data>\n</req>\n",
       encode_base64($hostname), encode_base64($item), encode_base64($data);
+    my $packet = "ZBXD\1" . pack('V', length($request)) . "\0\0\0\0" . $request;
 
     my $sock = IO::Socket::INET->new(
         PeerAddr => $zabbixserver,
@@ -202,7 +203,8 @@ sub zabbix_send {
     );
 
     die "Could not create socket: $ERRNO\n" unless $sock;
-    $sock->send($request);
+    $sock->send($packet);
+
     my @handles = IO::Select->new($sock)->can_read($SOCK_TIMEOUT);
     if ( $debug > 0 ) { print "host - $hostname, item - $item, data - $data\n"; }
 
